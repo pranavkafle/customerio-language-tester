@@ -14,7 +14,7 @@ A simple, one-click solution to test all your email template language variants i
 1. Open your Customer.io template in the editor
 2. Press `F12` (or right-click and select "Inspect") to open Developer Tools
 3. Click on the "Console" tab
-4. Visit our [GitHub repository](https://github.com/pranavkafle/customerio-language-tester) and copy the code from `src/automate.js`
+4. Copy the code from [automate.js](https://github.com/pranavkafle/customerio-language-tester/blob/main/src/automate.js)
 5. Paste the code into the console and press Enter
 6. Watch it test all your languages!
 
