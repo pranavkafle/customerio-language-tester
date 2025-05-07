@@ -53,13 +53,50 @@
       console.log(`\n► Processing tab: "${name}"`);
       tab.click();
   
-      // Wait until the main "Send test" button is enabled
-      const mainBtnSelector = 'div.cio-send-test button.fly-btn.fly-btn--sm';
+      // Helper function to normalize button text for comparison
+      function normalizeButtonText(text) {
+        return text
+          .trim()
+          .toLowerCase()
+          .replace(/\.{3,}/g, '') // Remove ellipsis
+          .replace(/\s+/g, ' ');  // Normalize whitespace
+      }
+  
+      // Wait until the main "Send test" button is enabled (more robust search)
+      const sendTestContainer = document.querySelector('div.cio-send-test');
+      if (!sendTestContainer) {
+        console.warn(`Send test container not found for "${name}".`);
+        throw new Error("SendTestContainerNotFound");
+      }
+
       await waitForCondition(() => {
-        const btn = document.querySelector(mainBtnSelector);
+        const btn = sendTestContainer.querySelector('button');
         return btn && !btn.disabled;
       });
-      const mainBtn = document.querySelector(mainBtnSelector);
+      
+      const mainBtn = Array.from(sendTestContainer.querySelectorAll('button')).find(btn => 
+        normalizeButtonText(btn.textContent).includes('send test')
+      );
+
+      if (!mainBtn) {
+        console.warn(`Main "Send test" button not found in container for "${name}".`);
+        // For debugging, log details of all buttons found in the container
+        const allButtonsInContainer = Array.from(sendTestContainer.querySelectorAll('button'));
+        if (allButtonsInContainer.length > 0) {
+          console.log("Available buttons in container for debugging:", allButtonsInContainer.map(b => ({ 
+            text: b.textContent.trim(), 
+            normalizedText: normalizeButtonText(b.textContent),
+            type: b.type, 
+            id: b.id, 
+            classes: b.className, 
+            htmlSnippet: b.outerHTML.substring(0, 120) + (b.outerHTML.length > 120 ? '...' : '') 
+          })));
+        } else {
+          console.log("No buttons found in the send test container.");
+        }
+        throw new Error("MainSendTestButtonNotFound");
+      }
+
       console.log(`Main "Send test" button enabled on "${name}". Clicking it.`);
       mainBtn.click();
   
@@ -77,10 +114,14 @@
       // Short delay in case of animations
       await new Promise(res => setTimeout(res, 100));
   
-      // In the modal, click the "Send test" button
-      const modalSendBtn = modal.querySelector('button.fly-btn.fly-btn--sm.fly-btn--primary[type="submit"]');
+      // In the modal, click the "Send test" button (more robust search)
+      const submitButtonsInModal = Array.from(modal.querySelectorAll('button[type="submit"]'));
+      const modalSendBtn = submitButtonsInModal.find(btn => 
+        normalizeButtonText(btn.textContent).includes('send test')
+      );
+
       if (modalSendBtn) {
-        console.log(`Clicking modal's "Send test" button on "${name}".`);
+        console.log(`Clicking modal's "Send test" button (found by type and text) on "${name}".`);
         modalSendBtn.click();
         // Wait (with exponential backoff) for confirmation that the test was sent
         await retryWithExponentialBackoff(async () => {
@@ -88,13 +129,28 @@
         });
         console.log(`Confirmation ("Test sent!") detected for "${name}".`);
       } else {
-        console.warn(`Modal "Send test" button not found on "${name}".`);
+        console.warn(`Modal "Send test" button (type="submit" containing "Send test") not found on "${name}".`);
+        // For debugging, log details of all buttons found in the modal if the target isn't found:
+        const allButtonsInModal = Array.from(modal.querySelectorAll('button'));
+        if (allButtonsInModal.length > 0) {
+          console.log("Available buttons in modal for debugging:", allButtonsInModal.map(b => ({ 
+            text: b.textContent.trim(), 
+            normalizedText: normalizeButtonText(b.textContent),
+            type: b.type, 
+            id: b.id, 
+            classes: b.className, 
+            htmlSnippet: b.outerHTML.substring(0, 120) + (b.outerHTML.length > 120 ? '...' : '') 
+          })));
+        } else {
+          console.log("No buttons of any kind found in the modal.");
+        }
         throw new Error("ModalSendBtnNotFound");
       }
   
-      // Click the Cancel button to close the modal
-      const cancelBtn = Array.from(modal.querySelectorAll('button.fly-btn.fly-btn--sm'))
-        .find(btn => btn.textContent.trim() === "Cancel");
+      // Click the Cancel button to close the modal (also made more robust)
+      const cancelBtn = Array.from(modal.querySelectorAll('button')).find(btn => 
+        normalizeButtonText(btn.textContent) === 'cancel'
+      );
       if (cancelBtn) {
         console.log(`Clicking modal's "Cancel" button on "${name}".`);
         cancelBtn.click();
